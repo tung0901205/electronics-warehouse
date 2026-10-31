@@ -1,0 +1,32 @@
+CREATE TABLE roles (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE,
+  description VARCHAR(255)
+) ENGINE=InnoDB;
+
+CREATE TABLE users (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(150) NOT NULL UNIQUE,
+  password_hash VARCHAR(100) NOT NULL,
+  full_name VARCHAR(150) NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  version BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+
+CREATE TABLE user_roles (
+  user_id BIGINT NOT NULL,
+  role_id BIGINT NOT NULL,
+  PRIMARY KEY (user_id, role_id),
+  CONSTRAINT fk_ur_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES roles(id)
+) ENGINE=InnoDB;
+
+INSERT IGNORE INTO roles (name, description) VALUES
+ ('ADMIN','Toàn quyền'),
+ ('WAREHOUSE_MANAGER','Duyệt phiếu, báo cáo'),
+ ('WAREHOUSE_STAFF','Nhập/xuất, kiểm kê'),
+ ('SALES','Yêu cầu xuất'),
+ ('VIEWER','Chỉ xem');

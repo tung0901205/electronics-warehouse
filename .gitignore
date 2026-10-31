@@ -1,0 +1,24 @@
+# Environment files (chứa mật khẩu local - KHÔNG commit)
+.env
+.env.local
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+# Build
+target/
+build/
+*.class
+
+# OS
+.DS_Store
+Thumbs.db

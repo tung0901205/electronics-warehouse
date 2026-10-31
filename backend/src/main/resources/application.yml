@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: warehouse
+
+  datasource:
+    # Có thể ghi đè bằng biến môi trường DB_URL (GitHub Actions dùng cổng 3306, máy bạn dùng 3307)
+    url: ${DB_URL:jdbc:mysql://localhost:3307/warehouse_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:warehouse_user}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate      # Hibernate chỉ KIỂM TRA entity khớp bảng, bảng do Flyway quản lý
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+
+  # Tài khoản TẠM để thử API bằng Basic Auth. Sẽ xóa khi làm JWT (Giai đoạn 2).
+  security:
+    user:
+      name: dev
+      password: dev123
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# Swagger UI: http://localhost:8080/swagger-ui.html   |   JSON: http://localhost:8080/v3/api-docs
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+  # Khi triển khai thật nên tắt: springdoc.api-docs.enabled=false và springdoc.swagger-ui.enabled=false
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
