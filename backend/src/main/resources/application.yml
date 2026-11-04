@@ -16,21 +16,30 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        # Nạp quan hệ LAZY theo lô 20 dòng một lần, giảm số truy vấn khi hiển thị danh sách (tránh lỗi N+1)
+        default_batch_fetch_size: 20
 
   flyway:
     enabled: true
-
-  # Tài khoản TẠM để thử API bằng Basic Auth. Sẽ xóa khi làm JWT (Giai đoạn 2).
-  security:
-    user:
-      name: dev
-      password: dev123
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+
+app:
+  jwt:
+    # Khóa ký JWT, tối thiểu 32 ký tự. Giá trị mặc định dưới đây CHỈ để học trên máy cá nhân.
+    # Khi triển khai thật: đặt biến môi trường JWT_SECRET, không commit khóa thật.
+    secret: ${JWT_SECRET:dev-only-secret-key-change-me-0123456789}
+    access-token-minutes: 15
+    refresh-token-days: 7
+  bootstrap:
+    # Tự tạo 5 tài khoản demo (admin, manager, staff, sales, viewer) khi bảng users còn trống.
+    # Khi triển khai thật: đặt enabled=false.
+    enabled: true
+    password: Demo@12345
 
 # Swagger UI: http://localhost:8080/swagger-ui.html   |   JSON: http://localhost:8080/v3/api-docs
 springdoc:
@@ -39,7 +48,6 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
     display-request-duration: true
-  # Khi triển khai thật nên tắt: springdoc.api-docs.enabled=false và springdoc.swagger-ui.enabled=false
 
 logging:
   level:

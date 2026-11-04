@@ -2,7 +2,7 @@
 
 Hệ thống quản lý kho thiết bị điện tử cho doanh nghiệp B2B: nhiều kho, theo dõi từng serial/IMEI, nhập kho, xuất kho theo FIFO, điều chuyển giữa các kho, kiểm kê, đổi trả (RMA), báo cáo và cảnh báo.
 
-> Trạng thái: **đang phát triển** (Giai đoạn 1 hoàn thành: nền tảng, Swagger, CI). Xem bảng tiến độ bên dưới.
+> Trạng thái: **đang phát triển** (Giai đoạn 1 xong: nền tảng, Swagger, CI. Giai đoạn 2 đang làm: đã có đăng nhập JWT và phân quyền). Xem bảng tiến độ bên dưới.
 
 ![CI](https://github.com/<tên-github-của-bạn>/electronics-warehouse/actions/workflows/ci.yml/badge.svg)
 
@@ -19,12 +19,12 @@ Dự án tập trung vào **tính đúng đắn của dữ liệu tồn kho**, k
 
 | Lớp | Công nghệ |
 |---|---|
-| Backend | Java 17, Spring Boot 4, Spring Data JPA (Hibernate), Spring Security, Bean Validation |
+| Backend | Java 17, Spring Boot 4, Spring Data JPA (Hibernate), Spring Security (JWT, RoleHierarchy), Bean Validation |
 | Cơ sở dữ liệu | MySQL 8.4 (InnoDB), Flyway migration |
 | Tài liệu API | springdoc OpenAPI (Swagger UI) |
 | Kiểm thử | JUnit 5, AssertJ, Spring Boot Test |
 | Hạ tầng | Docker Compose, GitHub Actions |
-| Kế hoạch | JWT, Redis, Kafka, Testcontainers, Angular |
+| Kế hoạch | Redis, Kafka, Testcontainers, Angular |
 
 ## Kiến trúc
 
@@ -75,7 +75,18 @@ Khi khởi động, Flyway tự tạo các bảng.
 ### 3. Thử API
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - Health: http://localhost:8080/actuator/health
-- Tài khoản tạm để thử: `dev` / `dev123` (Basic Auth, chỉ dùng khi học; sẽ thay bằng JWT).
+- Đăng nhập: `POST /api/auth/login`, lấy `accessToken`, bấm **Authorize** trên Swagger rồi dán token vào.
+- 5 tài khoản demo (tự tạo khi chạy lần đầu), mật khẩu chung `Demo@12345`:
+
+| Tài khoản | Vai trò | Kế thừa |
+|---|---|---|
+| `admin` | ADMIN | Quản lý kho, Nhân viên kho, Người xem |
+| `manager` | WAREHOUSE_MANAGER | Nhân viên kho, Người xem |
+| `staff` | WAREHOUSE_STAFF | Người xem |
+| `sales` | SALES | Người xem |
+| `viewer` | VIEWER | không |
+
+Đây là tài khoản chỉ dùng để học và demo. Khi triển khai thật phải đặt `app.bootstrap.enabled=false`.
 
 ## Biến môi trường
 
@@ -84,6 +95,7 @@ Khi khởi động, Flyway tự tạo các bảng.
 | `DB_PASSWORD` | không có (bắt buộc) | Mật khẩu của `warehouse_user` |
 | `DB_URL` | `jdbc:mysql://localhost:3307/warehouse_db?...` | Địa chỉ database |
 | `DB_USERNAME` | `warehouse_user` | Tên tài khoản database |
+| `JWT_SECRET` | khóa mẫu dùng khi học | Khóa ký JWT, tối thiểu 32 ký tự. Triển khai thật bắt buộc tự đặt |
 
 ## Kiểm thử
 
@@ -107,9 +119,9 @@ GitHub Actions chạy `./mvnw verify` kèm một container MySQL cho mỗi lần
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
 | 1 | Nền tảng: Spring Boot, MySQL, Flyway, xử lý lỗi thống nhất, Swagger, CI | Xong |
-| 2 | JWT, phân quyền theo vai trò (RoleHierarchy), CRUD dữ liệu nền, giao diện Angular | Chưa làm |
-| 3 | Tồn kho, lô, serial, sổ giao dịch, khóa đồng thời | Chưa làm |
-| 4 | Nhập kho | Chưa làm |
+| 2 | JWT, phân quyền theo vai trò (RoleHierarchy), CRUD dữ liệu nền, giao diện Angular | Đang làm (xong đăng nhập JWT, phân quyền, người dùng, nhà cung cấp, khách hàng, danh mục, sản phẩm và biến thể, kho, khu vực, vị trí, phạm vi kho; còn giao diện Angular) |
+| 3 | Tồn kho, lô, serial, sổ giao dịch, khóa đồng thời | Code xong (InventoryService, API tra cứu tồn, test đồng thời), chờ chạy test |
+| 4 | Nhập kho | Chờ test|
 | 5 | Xuất kho FIFO, test đồng thời | Chưa làm |
 | 6 | Điều chuyển, kiểm kê, RMA | Chưa làm |
 | 7 | Báo cáo, dashboard, audit log | Chưa làm |
