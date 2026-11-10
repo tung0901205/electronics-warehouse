@@ -1,6 +1,7 @@
 package com.tung.warehouse.inventory.entity;
 
 import com.tung.warehouse.common.entity.BaseEntity;
+import com.tung.warehouse.common.exception.ConflictException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -49,6 +50,23 @@ public class DeviceUnit extends BaseEntity {
         this.batch = batch;
         this.serialNumber = serialNumber;
         this.locationId = locationId;
+    }
+
+    /** [MỚI Giai đoạn 5] Giữ chỗ thiết bị cho một phiếu xuất: IN_STOCK sang RESERVED. */
+    public void reserve() {
+        if (status != DeviceUnitStatus.IN_STOCK) {
+            throw new ConflictException("Serial " + serialNumber + " đang ở trạng thái " + status + ", không thể giữ chỗ");
+        }
+        this.status = DeviceUnitStatus.RESERVED;
+    }
+
+    /** [MỚI Giai đoạn 5] Hủy giữ chỗ: RESERVED trở lại IN_STOCK. */
+    public void unreserve() {
+        this.status = DeviceUnitStatus.IN_STOCK;
+    }
+
+    public void setWarrantyEndDate(LocalDate warrantyEndDate) {
+        this.warrantyEndDate = warrantyEndDate;
     }
 
     /** Thiết bị rời khỏi kho: đổi trạng thái (SOLD, IN_TRANSIT, SCRAPPED...) và bỏ vị trí. */
