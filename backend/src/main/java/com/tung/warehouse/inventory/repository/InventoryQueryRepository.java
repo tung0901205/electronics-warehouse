@@ -1,7 +1,10 @@
 package com.tung.warehouse.inventory.repository;
 
+import com.tung.warehouse.inventory.dto.BalanceInfo;
 import com.tung.warehouse.inventory.dto.BalanceRow;
+import com.tung.warehouse.inventory.dto.CountableBalance;
 import com.tung.warehouse.inventory.dto.StockFilter;
+import com.tung.warehouse.inventory.dto.SerialEventRow;
 import com.tung.warehouse.inventory.dto.SerialRow;
 import com.tung.warehouse.inventory.dto.SummaryRow;
 import com.tung.warehouse.inventory.dto.TransactionFilter;
@@ -9,7 +12,10 @@ import com.tung.warehouse.inventory.dto.TransactionRow;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -263,5 +269,80 @@ public class InventoryQueryRepository {
                 rs.getString("location_code"),
                 rs.getObject("warehouse_id", Long.class),
                 rs.getString("warehouse_code")), where.args().toArray());
+    }
+
+    // ==================== DÙNG CHO KIỂM KÊ ====================
+
+    /** Các dòng tồn còn hàng của một kho, lọc thêm theo khu vực hoặc biến thể nếu có. */
+    public List<CountableBalance> findCountableBalances(Long warehouseId, Long zoneId, Long variantId) {
+        SqlWhere where = new SqlWhere().and("b.warehouse_id = ?", warehouseId).and("b.on_hand > 0");
+        if (zoneId != null) {
+            where.and("l.zone_id = ?", zoneId);
+        }
+        if (variantId != null) {
+            where.and("b.variant_id = ?", variantId);
+        }
+        String sql = "SELECT b.id, b.on_hand, b.reserved, b.version FROM inventory_balances b "
+                + "JOIN storage_locations l ON l.id = b.location_id" + where.sql() + " ORDER BY b.id";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new CountableBalance(
+                rs.getLong("id"), rs.getInt("on_hand"), rs.getInt("reserved"), rs.getLong("version")), where.args().toArray());
+    }
+
+    /** Thông tin hiển thị (SKU, tên, vị trí, lô) của một nhóm dòng tồn, trả về dạng bảng tra theo id. */
+    public Map<Long, BalanceInfo> findBalanceInfos(Collection<Long> balanceIds) {
+        Map<Long, BalanceInfo> result = new HashMap<>();
+        if (balanceIds.isEmpty()) {
+            return result;
+        }
+        String sql = """
+                SELECT b.id, b.variant_id, v.sku, p.name AS product_name, l.code AS location_code, ib.batch_code
+                  FROM inventory_balances b
+                  JOIN storage_locations l ON l.id = b.location_id
+                  JOIN product_variants v ON v.id = b.variant_id
+                  JOIN products p ON p.id = v.product_id
+                  JOIN inventory_batches ib ON ib.id = b.batch_id
+                 WHERE b.id IN (""" + SqlWhere.placeholders(balanceIds.size()) + ")";
+        jdbcTemplate.query(sql, (rs) -> {
+            result.put(rs.getLong("id"), new BalanceInfo(rs.getLong("id"), rs.getLong("variant_id"), rs.getString("sku"),
+                    rs.getString("product_name"), rs.getString("location_code"), rs.getString("batch_code")));
+        }, balanceIds.toArray());
+        return result;
+    }
+
+    // ==================== VÒNG ĐỜI CỦA SERIAL ====================
+
+    /** Toàn bộ sự kiện của thiết bị có số serial này, theo thứ tự thời gian. */
+    public List<SerialEventRow> findSerialHistory(String serial) {
+        String sql = """
+                SELECT e.id, e.created_at, e.type, d.serial_number, v.sku,
+                       wf.code AS from_warehouse, lf.code AS from_location,
+                       wt.code AS to_warehouse, lt.code AS to_location,
+                       e.reference_type, e.reference_id, u.username
+                  FROM device_unit_events e
+                  JOIN device_units d ON d.id = e.device_unit_id
+                  JOIN product_variants v ON v.id = d.variant_id
+                  LEFT JOIN storage_locations lf ON lf.id = e.from_location_id
+                  LEFT JOIN warehouse_zones zf ON zf.id = lf.zone_id
+                  LEFT JOIN warehouses wf ON wf.id = zf.warehouse_id
+                  LEFT JOIN storage_locations lt ON lt.id = e.to_location_id
+                  LEFT JOIN warehouse_zones zt ON zt.id = lt.zone_id
+                  LEFT JOIN warehouses wt ON wt.id = zt.warehouse_id
+                  LEFT JOIN users u ON u.id = e.performed_by
+                 WHERE d.serial_number = ?
+                 ORDER BY e.id
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new SerialEventRow(
+                rs.getLong("id"),
+                rs.getObject("created_at", LocalDateTime.class),
+                rs.getString("type"),
+                rs.getString("serial_number"),
+                rs.getString("sku"),
+                rs.getString("from_warehouse"),
+                rs.getString("from_location"),
+                rs.getString("to_warehouse"),
+                rs.getString("to_location"),
+                rs.getString("reference_type"),
+                rs.getObject("reference_id", Long.class),
+                rs.getString("username")), serial);
     }
 }

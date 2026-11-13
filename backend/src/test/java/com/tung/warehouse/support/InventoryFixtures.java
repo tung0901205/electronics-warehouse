@@ -14,8 +14,10 @@ import com.tung.warehouse.warehouse.service.LocationService;
 import com.tung.warehouse.warehouse.service.WarehouseService;
 import com.tung.warehouse.warehouse.service.ZoneService;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -97,6 +99,58 @@ public class InventoryFixtures {
         long variantId = productService.addVariant(productId,
                 new VariantRequest(sku, null, null, unitId, trackingType, new BigDecimal("1000"), 12)).id();
         return new TestVariant(variantId, sku);
+    }
+
+    /**
+     * [MỚI Giai đoạn 6] Dọn MỌI dữ liệu test liên quan tới biến thể và kho TSTINV: đổi trả, kiểm kê, điều chuyển, xuất kho,
+     * sự kiện serial, rồi gọi cleanUp() để dọn phần tồn kho. Thứ tự đi từ bảng "con" lên bảng "cha" theo khóa ngoại.
+     */
+    public void cleanUpAll() {
+        String variants = "(select id from product_variants where sku like 'TSTINV%')";
+        String warehouses = "(select id from warehouses where code like 'TSTINV%')";
+        String balances = "(select id from inventory_balances where variant_id in " + variants + ")";
+
+        // đổi trả
+        jdbcTemplate.update("delete from rma_lines where variant_id in " + variants);
+        jdbcTemplate.update("delete from rma_orders where outbound_order_id in "
+                + "(select outbound_order_id from outbound_order_lines where variant_id in " + variants + ")");
+
+        // kiểm kê
+        jdbcTemplate.update("delete from stock_adjustments where stocktake_line_id in "
+                + "(select id from stocktake_lines where balance_id in " + balances + ")");
+        jdbcTemplate.update("delete from stocktake_lines where balance_id in " + balances);
+        jdbcTemplate.update("delete from stocktake_sessions where scope_variant_id in " + variants + " or warehouse_id in " + warehouses);
+
+        // điều chuyển
+        List<Long> transferIds = jdbcTemplate.queryForList(
+                "select distinct transfer_order_id from transfer_order_lines where variant_id in " + variants, Long.class);
+        jdbcTemplate.update("delete from transfer_unit_items where transfer_line_id in "
+                + "(select id from transfer_order_lines where variant_id in " + variants + ")");
+        jdbcTemplate.update("delete from transfer_order_lines where variant_id in " + variants);
+        if (!transferIds.isEmpty()) {
+            jdbcTemplate.update("delete from transfer_orders where id in (" + join(transferIds) + ")");
+        }
+
+        // xuất kho
+        String lines = "(select id from outbound_order_lines where variant_id in " + variants + ")";
+        List<Long> outboundIds = jdbcTemplate.queryForList(
+                "select distinct outbound_order_id from outbound_order_lines where variant_id in " + variants, Long.class);
+        jdbcTemplate.update("delete from outbound_allocations where outbound_line_id in " + lines);
+        jdbcTemplate.update("delete from inventory_reservations where outbound_line_id in " + lines);
+        jdbcTemplate.update("delete from outbound_order_lines where variant_id in " + variants);
+        if (!outboundIds.isEmpty()) {
+            jdbcTemplate.update("delete from outbound_orders where id in (" + join(outboundIds) + ")");
+        }
+
+        // vòng đời serial
+        jdbcTemplate.update("delete from device_unit_events where device_unit_id in "
+                + "(select id from device_units where variant_id in " + variants + ")");
+
+        cleanUp();
+    }
+
+    private static String join(List<Long> ids) {
+        return ids.stream().map(String::valueOf).collect(Collectors.joining(","));
     }
 
     /** Dọn theo đúng thứ tự khóa ngoại: sổ giao dịch, thiết bị, tồn, lô, rồi tới biến thể, sản phẩm, danh mục, kho. */

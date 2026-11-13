@@ -2,6 +2,7 @@ package com.tung.warehouse.inventory.controller;
 
 import com.tung.warehouse.common.response.PageResponse;
 import com.tung.warehouse.inventory.dto.BalanceRow;
+import com.tung.warehouse.inventory.dto.SerialEventRow;
 import com.tung.warehouse.inventory.dto.SerialRow;
 import com.tung.warehouse.inventory.dto.SummaryRow;
 import com.tung.warehouse.inventory.dto.TransactionRow;
@@ -74,5 +75,12 @@ public class InventoryController {
     @Operation(summary = "Tra cứu trạng thái hiện tại của thiết bị theo số serial (UC8.3)")
     public List<SerialRow> serials(@RequestParam(name = "serial") String serial) {
         return queryService.findBySerial(serial);
+    }
+
+    @GetMapping("/serials/history")
+    @PreAuthorize("hasRole('VIEWER')")
+    @Operation(summary = "Vòng đời của một serial: nhập, chuyển kho, bán, nhận hàng trả (UC8.3)")
+    public List<SerialEventRow> serialHistory(@RequestParam(name = "serial") String serial) {
+        return queryService.serialHistory(serial);
     }
 }

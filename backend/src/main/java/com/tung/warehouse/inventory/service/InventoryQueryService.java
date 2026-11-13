@@ -5,6 +5,7 @@ import com.tung.warehouse.common.response.PageResponse;
 import com.tung.warehouse.common.security.CurrentUser;
 import com.tung.warehouse.common.util.PagingUtil;
 import com.tung.warehouse.inventory.dto.BalanceRow;
+import com.tung.warehouse.inventory.dto.SerialEventRow;
 import com.tung.warehouse.inventory.dto.SerialRow;
 import com.tung.warehouse.inventory.dto.StockFilter;
 import com.tung.warehouse.inventory.dto.SummaryRow;
@@ -87,6 +88,18 @@ public class InventoryQueryService {
         }
         List<Long> restrictTo = CurrentUser.isAdmin() ? null : new ArrayList<>(CurrentUser.warehouseIds());
         return queryRepository.findBySerial(serial.trim(), restrictTo);
+    }
+
+    /**
+     * [MỚI Giai đoạn 6] Vòng đời của một serial: nhập, chuyển đi, chuyển đến, bán, nhận hàng trả...
+     * Người thường chỉ xem được nếu thiết bị hiện đang ở kho được gán hoặc đã rời kho (cùng quy tắc với tra cứu serial).
+     */
+    @Transactional(readOnly = true)
+    public List<SerialEventRow> serialHistory(String serial) {
+        if (findBySerial(serial).isEmpty()) {
+            return List.of();
+        }
+        return queryRepository.findSerialHistory(serial.trim());
     }
 
     /**

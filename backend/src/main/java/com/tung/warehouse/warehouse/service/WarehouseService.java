@@ -55,6 +55,15 @@ public class WarehouseService {
     }
 
     /**
+     * [MỚI Giai đoạn 6] Tra thông tin một kho mà KHÔNG kiểm tra phạm vi kho của người dùng.
+     * Dùng khi cần biết kho đích của phiếu điều chuyển (người tạo phiếu có thể không được gán kho đích).
+     */
+    @Transactional(readOnly = true)
+    public WarehouseResponse lookup(Long id) {
+        return WarehouseResponse.from(findOrThrow(id));
+    }
+
+    /**
      * Tạo kho và tự tạo luôn "khu hệ thống" (SYS) kèm hai vị trí đặc biệt RECEIVING và DEFECTIVE.
      * Cả bốn thao tác ghi nằm trong một transaction: lỗi ở bước nào thì không có gì được lưu.
      */

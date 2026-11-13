@@ -2,7 +2,8 @@ package com.tung.warehouse.audit.repository;
 
 import com.tung.warehouse.audit.entity.AuditLog;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-/** Nhật ký chỉ THÊM: code chỉ được dùng save(...). Màn hình xem nhật ký (UC11.2) làm ở giai đoạn 7. */
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+/** [SỬA Giai đoạn 7] Thêm JpaSpecificationExecutor để tìm kiếm nhật ký bằng Specification (UC11.2). */
+public interface AuditLogRepository extends JpaRepository<AuditLog, Long>, JpaSpecificationExecutor<AuditLog> {
 }

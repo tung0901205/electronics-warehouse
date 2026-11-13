@@ -36,6 +36,16 @@ public final class CurrentUser {
         return authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
+    /** [MỚI Giai đoạn 6] Người đang đăng nhập có phải Quản lý kho hoặc Admin không? (dùng cho các việc cần Quản lý duyệt) */
+    public static boolean isManagerOrAbove() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_WAREHOUSE_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"));
+    }
+
     /**
      * [MỚI Ngày 7] Danh sách id kho được gán, đọc từ claim "warehouses" trong JWT.
      * Lưu ý: danh sách này được chốt lúc đăng nhập hoặc làm mới token, nên thay đổi phân quyền kho

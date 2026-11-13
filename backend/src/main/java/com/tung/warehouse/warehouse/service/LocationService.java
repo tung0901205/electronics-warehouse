@@ -42,6 +42,14 @@ public class LocationService {
         return LocationResponse.from(findOrThrow(id));
     }
 
+    /** [MỚI Giai đoạn 6] Vị trí hàng lỗi (DEFECTIVE) của một kho. Kho nào cũng có sẵn một vị trí như vậy. */
+    @Transactional(readOnly = true)
+    public LocationResponse findDefectiveLocation(Long warehouseId) {
+        return LocationResponse.from(locationRepository
+                .findFirstByZoneWarehouseIdAndLocationType(warehouseId, LocationType.DEFECTIVE)
+                .orElseThrow(() -> new NotFoundException("Vị trí hàng lỗi của kho", warehouseId)));
+    }
+
     @Transactional
     public LocationResponse create(Long zoneId, LocationRequest request) {
         WarehouseZone zone = zoneRepository.findById(zoneId)

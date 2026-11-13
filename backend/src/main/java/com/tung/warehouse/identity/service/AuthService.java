@@ -1,5 +1,6 @@
 package com.tung.warehouse.identity.service;
 
+import com.tung.warehouse.audit.service.AuditService;
 import com.tung.warehouse.common.exception.AccountDisabledException;
 import com.tung.warehouse.common.exception.BusinessException;
 import com.tung.warehouse.common.exception.InvalidCredentialsException;
@@ -25,27 +26,34 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final AuditService auditService;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       JwtService jwtService, RefreshTokenService refreshTokenService) {
+                       JwtService jwtService, RefreshTokenService refreshTokenService, AuditService auditService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
+        this.auditService = auditService;
     }
 
     /** UC1.1: đăng nhập bằng tên đăng nhập và mật khẩu. */
     @Transactional
     public TokenResponse login(LoginRequest request) {
         // Sai tên đăng nhập hay sai mật khẩu đều báo cùng một lỗi
-        User user = userRepository.findByUsername(request.username())
-                .orElseThrow(InvalidCredentialsException::new);
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        User user = userRepository.findByUsername(request.username()).orElse(null);
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            // Ghi trong transaction RIÊNG: lát nữa ném lỗi 401 làm hoàn tác transaction này, nhưng dòng nhật ký vẫn phải còn
+            auditService.recordInNewTransaction(null, "LOGIN_FAILURE", "USER", user == null ? null : user.getId(),
+                    "FAILURE", "Đăng nhập thất bại: " + request.username());
             throw new InvalidCredentialsException();
         }
         if (!user.isEnabled()) {
+            auditService.recordInNewTransaction(user.getId(), "LOGIN_FAILURE", "USER", user.getId(),
+                    "FAILURE", "Tài khoản bị vô hiệu hóa: " + request.username());
             throw new AccountDisabledException();
         }
+        auditService.record(user.getId(), "LOGIN_SUCCESS", "USER", user.getId(), "SUCCESS", "Đăng nhập: " + user.getUsername());
         return issueTokens(user);
     }
 

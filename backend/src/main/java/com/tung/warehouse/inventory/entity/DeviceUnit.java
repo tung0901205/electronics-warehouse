@@ -65,6 +65,24 @@ public class DeviceUnit extends BaseEntity {
         this.status = DeviceUnitStatus.IN_STOCK;
     }
 
+    /** [MỚI Giai đoạn 6] Thiết bị đến kho đích khi điều chuyển: IN_TRANSIT sang IN_STOCK tại vị trí mới. */
+    public void arriveAt(Long newLocationId) {
+        if (status != DeviceUnitStatus.IN_TRANSIT) {
+            throw new ConflictException("Serial " + serialNumber + " đang ở trạng thái " + status + ", không phải hàng đang vận chuyển");
+        }
+        this.status = DeviceUnitStatus.IN_STOCK;
+        this.locationId = newLocationId;
+    }
+
+    /** [MỚI Giai đoạn 6] Khách trả hàng: SOLD trở lại kho. Hàng tốt thành IN_STOCK, hàng lỗi thành DEFECTIVE. */
+    public void returnToStock(Long newLocationId, boolean defective) {
+        if (status != DeviceUnitStatus.SOLD) {
+            throw new ConflictException("Serial " + serialNumber + " đang ở trạng thái " + status + ", không phải hàng đã bán");
+        }
+        this.status = defective ? DeviceUnitStatus.DEFECTIVE : DeviceUnitStatus.IN_STOCK;
+        this.locationId = newLocationId;
+    }
+
     public void setWarrantyEndDate(LocalDate warrantyEndDate) {
         this.warrantyEndDate = warrantyEndDate;
     }
